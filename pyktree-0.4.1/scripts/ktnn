@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+# encoding: utf-8
+#
+# Copyright © 2011 Ulf Großekathöfer
+#
+# Email: ugrossek@techfak.uni-bielefeld.de
+#
+# Last modified: Tue Feb 01, 2011  10:19PM
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>
+
+import sys
+import optparse
+import numpy
+import ktree
+import ktree.utils
+
+def parse_command_line(args): 
+    """Function that parse the command line arguments."""
+    usage =  "usage: %prog {-k|--k-tree} FILE  {-d|--data-set} FILE  {-q|--quite}"
+    parser = optparse.OptionParser(usage)
+    # k-tree 
+    parser.add_option("-k","--k-tree", type="string", dest="k_tree_file", 
+                        help="file to load K-Tree from, see ktbuild for how to generate such a file", 
+                        default="ktree.ktf", metavar="FILE")
+    # data set:
+    parser.add_option("-d", "--data-set", dest="data_set_file",
+                        help="file that contains examples for which nearest neighbors are searched", 
+                        metavar="FILE")
+    # outfile:
+    parser.add_option("-o","--outfile", type="string", dest="outfile", 
+                        help="write nearest neighbors to file", 
+                        default="nearest_neighbors.txt", metavar="FILE")
+    # verbose
+    parser.add_option("-q", "--quite", action="store_true", dest="quite",
+                        help="Do not print any status information to stdout.",
+                        default=False)
+    (options, args) = parser.parse_args()
+    return options
+
+
+if __name__ == '__main__':
+    options = parse_command_line(sys.argv)
+    if not options.quite:
+        print "Loading K-Tree from", options.k_tree_file, "...",
+    k = ktree.utils.load_ktree(options.k_tree_file)
+    if not options.quite:
+        print "Done."
+        print "Loading data set from", options.data_set_file, "...",
+    dataset = numpy.loadtxt(options.data_set_file)
+    if not options.quite:
+        print "Done."
+        print "Searching nearest neighbors...",
+    nns = [ k.nearest_neighbor(d) for d in dataset ]
+    if not options.quite:
+        print "Done."
+        print "Writing nearest neighbors to", options.outfile, "...",
+    numpy.savetxt(options.outfile, numpy.array(nns)) 
+    if not options.quite:
+        print "Done."

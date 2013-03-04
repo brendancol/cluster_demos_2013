@@ -1,0 +1,109 @@
+#!/usr/bin/env python
+# encoding: utf-8
+#
+# Copyright © 2011 Ulf Großekathöfer
+#
+# Email: ugrossek@techfak.uni-bielefeld.de
+#
+# Last modified: Tue Feb 01, 2011  10:19PM
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>
+
+
+
+import sys
+import time
+import optparse
+try:
+    import numpy
+    import scipy
+except ImportError:
+    print "Unresolved dependency: Please install scipy (http://www.scipy.org) to use this program"
+    sys.exit(1)
+import ktree
+import ktree.utils
+import ktree.models
+
+
+def parse_command_line(args): 
+    """Function that parse the command line arguments."""
+    usage =  "usage: %prog {-d|--data-set} FILE {-o|--order} ORDER {-k|--k-tree} OUTFILE {-q|--quite} {-m|--unweighted-mean} {-r|-reinsert} {-f|--distance} DIST"
+    parser = optparse.OptionParser(usage)
+    # data set:
+    parser.add_option("-d", "--data-set", dest="data_set_file",
+                        help="load data set from file", metavar="FILE")
+    # order
+    parser.add_option("-o", "--order", type="int", dest="order",
+                        help="order of K-Tree", default=5, metavar="ORDER")
+    # outfile
+    parser.add_option("-k","--outfile", type="string", dest="outfile", 
+                        help="file to save K-Tree in", default="ktree.ktf", 
+                        metavar="FILE")
+    # verbose
+    parser.add_option("-q", "--quite", action="store_true", dest="quite",
+                        help="Be quite and do not print any status information to stdout.",
+                        default=False)
+    # weighted mean
+    parser.add_option("-m", "--unweighted-mean", action="store_false", dest="weighted",
+                        help="Use unwighted mean for computation of k-means.",
+                        default=True)
+    # reinsert examples
+    parser.add_option("-r", "--reinsert", action="store_true", dest="reinsert",
+                        help="re-insert all examples when tree is ready.",
+                        default=False)
+
+    # distance measure
+    distances_help = "Distance measure for k-tree. Distance can be one of:"
+    for d in ktree.models.DISTANCES:
+        distances_help += " " + d
+    distances_help += ". Default distance measure is 'sqeuclidean'."
+    parser.add_option("-f", "--distance", dest="distance",
+                        help=distances_help, default="sqeuclidean", metavar="DIST")
+    (options, args) = parser.parse_args()
+    if options.distance not in ktree.models.DISTANCES:
+        raise UserWarning("%s is not a valid distance." % (options.distance,))
+    return options
+
+
+def main():
+    options = parse_command_line(sys.argv)
+    if not options.quite:
+        print "loading data set from file", options.data_set_file
+    try:
+        dataset = numpy.loadtxt(options.data_set_file)
+    except (IOError, ValueError), e:
+        s = "ERROR: Data set file %s not found (%s)." % (options.data_set_file, e)
+        raise UserWarning(s)
+    if not options.quite:
+        print "generating K-Tree...",
+    t0 = time.time()
+    k = ktree.ktree(data=dataset, options=options)
+    t = time.time() - t0
+    if not options.quite:
+        print "Done."
+        print "Generation finished in", round(t,3), "seconds."
+    try:
+        ktree.utils.save_ktree(k, options.outfile)
+    except IOError, e:
+        raise UserWarning("ERROR: Could not save K-Tree (%s)" % (e,))
+
+if __name__ == "__main__":
+    try:
+        main()
+    except UserWarning, w:
+        print w
+        sys.exit(1)
+#    except Exception, e:
+#        print "Unknown exception occured. (%s)" % e
+#        sys.exit(2)
